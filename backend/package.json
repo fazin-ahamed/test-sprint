@@ -1,0 +1,45 @@
+{
+  "name": "sprint90-backend",
+  "version": "0.1.0",
+  "description": "Backend API for Sprint90 JEE & CBSE Exam Prep Platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "seed:concepts": "ts-node seeds/seed_concepts.ts",
+    "test": "echo 'Tests to be added'"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-pg-migrate": "^6.2.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.11.3",
+    "redis": "^4.6.10",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.8.7",
+    "@types/passport": "^1.0.16",
+    "@types/passport-google-oauth20": "^2.0.14",
+    "@types/pg": "^8.10.7",
+    "@types/uuid": "^9.0.7",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
