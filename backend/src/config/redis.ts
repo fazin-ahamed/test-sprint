@@ -2,7 +2,7 @@ import { createClient } from 'redis';
 import { config } from './env';
 
 export const redisClient = createClient({
-  url: config.redisUrl
+  url: config.REDIS_URL
 });
 
 export const connectRedis = async (): Promise<void> => {

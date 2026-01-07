@@ -2,8 +2,8 @@ import { Pool } from 'pg';
 import { config } from './env';
 
 export const pool = new Pool({
-  connectionString: config.databaseUrl,
-  ssl: config.nodeEnv === 'production' ? { rejectUnauthorized: false } : false
+  connectionString: config.DATABASE_URL,
+  ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 export const testConnection = async (): Promise<boolean> => {

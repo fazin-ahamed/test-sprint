@@ -1,50 +1,74 @@
 import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import session from 'express-session';
+import passport from 'passport';
+import authRoutes from './api/auth';
+import { config } from './config/env';
+import './config/passport';
+import { errorHandler } from './middleware/errorHandler';
 
 const app: Application = express();
-const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+  frameguard: { action: 'deny' },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
 }));
-app.use(helmet());
+
+app.use(cors({
+  origin: config.FRONTEND_URL,
+  credentials: true,
+}));
+
+// Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+// Session middleware (required for Passport)
+app.use(session({
+  secret: config.JWT_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: config.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+  },
+}));
 
-// Basic routes placeholder
-app.get('/api', (req, res) => {
-  res.json({ message: 'Sprint90 API v1.0.0' });
-});
+// Passport initialization
+app.use(passport.initialize());
+app.use(passport.session());
 
-// Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ 
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
-  });
-});
+// Routes
+app.use('/auth', authRoutes);
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/api', (req, res) => res.json({ message: 'Sprint90 API v1.0.0' }));
 
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Start server
+// Error handler (MUST be last)
+app.use(errorHandler);
+
+const PORT = parseInt(config.PORT);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Environment: ${config.NODE_ENV}`);
   console.log(`Health check: http://localhost:${PORT}/api/health`);
 });
 

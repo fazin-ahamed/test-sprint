@@ -1,40 +1,52 @@
-// Authentication service
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env';
+import { getUserByGoogleId, createUser, createStudent } from './userService';
+import { OAuthResult, JWTPayload } from '../types/auth';
 
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  role: 'student' | 'admin';
+export function generateToken(userId: string, email: string, role: string): string {
+  return jwt.sign(
+    {
+      sub: userId,
+      user_id: userId,
+      email,
+      role,
+    },
+    config.JWT_SECRET,
+    {
+      algorithm: 'HS256',
+      expiresIn: '7d',
+    }
+  );
 }
 
-export class AuthService {
-  static generateToken(payload: JWTPayload): string {
-    return jwt.sign(payload, config.jwtSecret, { 
-      expiresIn: config.jwtExpiry 
-    } as jwt.SignOptions);
+export function verifyToken(token: string): JWTPayload {
+  try {
+    const decoded = jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ['HS256'],
+    }) as JWTPayload;
+    return decoded;
+  } catch (error) {
+    throw new Error('Invalid or expired token');
   }
+}
 
-  static verifyToken(token: string): JWTPayload | null {
-    try {
-      return jwt.verify(token, config.jwtSecret) as JWTPayload;
-    } catch (error) {
-      return null;
-    }
+export async function handleOAuthLogin(googleId: string, email: string): Promise<OAuthResult> {
+  let user = await getUserByGoogleId(googleId);
+  
+  if (!user) {
+    user = await createUser(email, googleId);
+    await createStudent(user.id);
   }
-
-  static async hashPassword(password: string): Promise<string> {
-    // TODO: Implement password hashing with bcrypt
-    return password;
-  }
-
-  static async verifyPassword(password: string, hash: string): Promise<boolean> {
-    // TODO: Implement password verification with bcrypt
-    return password === hash;
-  }
-
-  static async authenticateUser(email: string, password: string): Promise<JWTPayload | null> {
-    // TODO: Implement user authentication
-    return null;
-  }
+  
+  const token = generateToken(user.id, user.email, user.role);
+  
+  return {
+    success: true,
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
+  };
 }

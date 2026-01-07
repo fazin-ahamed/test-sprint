@@ -1,30 +1,67 @@
-// Authentication routes
 import express from 'express';
+import passport from 'passport';
+import { verifyTokenMiddleware } from '../middleware/verifyToken';
+import { generateToken } from '../services/authService';
+import { config } from '../config/env';
 
 const router = express.Router();
 
-// Google OAuth routes (to be implemented)
-router.get('/google', (req, res) => {
-  res.json({ message: 'Google OAuth login endpoint' });
-});
+// GET /auth/google - Initiates Google OAuth flow
+router.get(
+  '/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
 
-router.get('/google/callback', (req, res) => {
-  res.json({ message: 'Google OAuth callback endpoint' });
-});
+// GET /auth/google/callback - Google redirects here after user authorization
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/' }),
+  (req: any, res: express.Response) => {
+    const result = req.user as any;
+    
+    // Redirect to frontend with token
+    const redirectUrl = new URL(`${config.FRONTEND_URL}/auth/callback`);
+    redirectUrl.searchParams.set('token', result.token);
+    redirectUrl.searchParams.set('email', result.user.email);
+    redirectUrl.searchParams.set('role', result.user.role);
+    
+    res.redirect(redirectUrl.toString());
+  }
+);
 
-// Login endpoint
-router.post('/login', (req, res) => {
-  res.json({ message: 'Login endpoint - to be implemented' });
-});
+// GET /auth/me - Returns current authenticated user (Protected)
+router.get(
+  '/me',
+  verifyTokenMiddleware,
+  (req: express.Request, res: express.Response) => {
+    const user = (req as any).user;
+    res.json({
+      id: user.user_id,
+      email: user.email,
+      role: user.role,
+    });
+  }
+);
 
-// Logout endpoint
-router.post('/logout', (req, res) => {
-  res.json({ message: 'Logout endpoint - to be implemented' });
-});
+// POST /auth/refresh-token - Refreshes JWT token (Protected)
+router.post(
+  '/refresh-token',
+  verifyTokenMiddleware,
+  (req: express.Request, res: express.Response) => {
+    const user = (req as any).user;
+    const newToken = generateToken(
+      user.user_id,
+      user.email,
+      user.role
+    );
+    res.json({ token: newToken });
+  }
+);
 
-// Token refresh endpoint
-router.post('/refresh', (req, res) => {
-  res.json({ message: 'Token refresh endpoint - to be implemented' });
+// POST /auth/logout - Logout endpoint
+router.post('/logout', (req: express.Request, res: express.Response) => {
+  // Frontend handles token removal
+  res.json({ success: true });
 });
 
 export default router;
