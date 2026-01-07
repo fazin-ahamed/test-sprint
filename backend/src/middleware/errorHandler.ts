@@ -1,50 +1,24 @@
-// Error handling middleware
 import { Request, Response, NextFunction } from 'express';
+import { config } from '../config/env';
 
-export interface AppError extends Error {
-  statusCode?: number;
-  status?: string;
-  isOperational?: boolean;
-}
-
-export const createError = (message: string, statusCode: number = 500): AppError => {
-  const error: AppError = new Error(message);
-  error.statusCode = statusCode;
-  error.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
-  error.isOperational = true;
-  return error;
-};
-
-export const errorHandler = (
-  err: AppError,
+export function errorHandler(
+  err: any,
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+) {
+  console.error('Error:', err);
 
-  // Log error
-  console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    statusCode: err.statusCode,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent')
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  if (err.message === 'Invalid or expired token') {
+    return res.status(401).json({ error: err.message });
+  }
+
+  res.status(500).json({ 
+    error: 'Internal server error',
+    ...(config.NODE_ENV === 'development' && { debug: err.message })
   });
-
-  // Send error response
-  res.status(err.statusCode).json({
-    status: err.status,
-    message: err.message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-};
-
-export const asyncHandler = (fn: Function) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-};
+}
